@@ -77,11 +77,11 @@ ggplot(data = df, aes(x = Date, y = duration_per_use)) +
 df2 <- df[,c(1,3,5,6,9,10)]
 ggpairs(df2[,-1]) 
 
-df2_long <- pivot_longer(df2, cols = -Date, names_to = "series", values_to = "occupation_time")
-ggplot(data = df2_long, aes(x = Date, y = occupation_time, color = series)) +
-  geom_line() +
-  labs(title = "Melted plot", x = "Time", y = "Count") +
-  theme_minimal()
+# df2_long <- pivot_longer(df2, cols = -Date, names_to = "series", values_to = "occupation_time")
+# ggplot(data = df2_long, aes(x = Date, y = occupation_time, color = series)) +
+#   geom_line() +
+#   labs(title = "Melted plot", x = "Time", y = "Count") +
+#   theme_minimal()
 
 
 # Calculate the P(x >= c) for Total.ST.min
@@ -156,4 +156,53 @@ for(i in 2:6) {
   print(acf_result$acf)
   acf_result
 }
+par(mfrow=c(1,1))
 
+# P3
+library(circular)
+time_to_degrees <- function(time) {
+  # Convert time to hours and minutes
+  hours <- as.numeric(substr(time, 1, 2))
+  minutes <- as.numeric(substr(time, 4, 5))
+  # Calculate the total hours since midnight
+  total_hours <- hours + minutes / 60
+  # Calculate the angle
+  angle <- total_hours / 24 * 360
+  return(angle)
+}
+angles <- sapply(df$Pickup.1st_EST, time_to_degrees)
+pickup_angles <- circular(angles, units="degrees", template="clock24")
+
+# Plot the circular data
+plot(pickup_angles, pch=19, col='blue', main="First Pickup Times on 24-hour Clock")
+
+plot(pickup_angles, stack=TRUE, bins=144, col=" blue " ) # 360/2.5=144
+
+# P4
+glm_model <- glm(Pickups ~ offset(log(Total.ST.min / 60)), family = poisson, data = df2)
+summary(glm_model)
+
+mark_weekdays <- function(date) {
+  if (weekdays(date) %in% c("Saturday", "Sunday")) {
+    return(0)
+  } else {
+    return(1)
+  }
+}
+df2$IsWeekday <- sapply(df2$Date, mark_weekdays)
+df2$IsAfterJan10 <- 1
+glm_model2 <- glm(Pickups ~ IsWeekday + IsAfterJan10 + offset(log(Total.ST.min / 60)), family=poisson, data = df2)
+summary(glm_model2)
+
+
+# P5
+estimates <- mle.vonmises(pickup_angles)
+mu <- estimates$mu
+kappa <- estimates$kappa
+angle_830AM <- (time_to_degrees("08:30") * 2 * pi)/360- pi
+angle_830AM_circular <- circular(angle_830AM, type = 'angles', units = 'radians')
+cdf <- pvonmises(angle_830AM_circular, mu, kappa)
+
+# The probability that the first pickup is at 8:30 AM or later
+probability <- 1 - cdf
+probability
