@@ -9,6 +9,8 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+GitHub Link: https://github.com/lianchenglu/BIOSTAT620_HW1
+
 ```{r include=FALSE}
 setwd("/home/chenggg/BIOSTAT620")
 Sys.setlocale("LC_TIME", "en_US.UTF-8")
