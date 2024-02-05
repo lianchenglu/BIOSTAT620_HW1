@@ -7,7 +7,6 @@ library(ggplot2)
 library(GGally)
 library(lubridate)
 library(reshape2)
-library(tidyr)
 df <- read_excel("ScreenTime.xlsx")
 df <- df[c(1:11), ]
 df$Pickup.1st_EST <- format(as.POSIXct(df$Pickup.1st_PST, format = "%H:%M", tz = "America/Los_Angeles"), "%H:%M", tz = "America/New_York")
@@ -25,7 +24,7 @@ df$prop_ST <- df$Social.ST.min / df$Total.ST.min
 df$duration_per_use <- df$Total.ST.min / df$Pickups
 
 # Daily total screen time
-ggplot(data = df, aes(x = Date, y = Total.ST.min)) +
+p1 <- ggplot(data = df, aes(x = Date, y = Total.ST.min)) +
   geom_line() + 
   geom_point() +  
   labs(title = "Daily total screen time",
@@ -35,7 +34,7 @@ ggplot(data = df, aes(x = Date, y = Total.ST.min)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 
 # Daily total social screen time
-ggplot(data = df, aes(x = Date, y = Social.ST.min)) +
+p2 <- ggplot(data = df, aes(x = Date, y = Social.ST.min)) +
   geom_line() + 
   geom_point() +  
   labs(title = "Daily total social screen time",
@@ -45,7 +44,7 @@ ggplot(data = df, aes(x = Date, y = Social.ST.min)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 
 # Daily number of pickups
-ggplot(data = df, aes(x = Date, y = Pickups)) +
+p3 <- ggplot(data = df, aes(x = Date, y = Pickups)) +
   geom_line() + 
   geom_point() +  
   labs(title = "Daily number of pickups",
@@ -55,7 +54,7 @@ ggplot(data = df, aes(x = Date, y = Pickups)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 
 # Daily proportion of social screen time
-ggplot(data = df, aes(x = Date, y = prop_ST)) +
+p4 <- ggplot(data = df, aes(x = Date, y = prop_ST)) +
   geom_line() + 
   geom_point() +  
   labs(title = "Daily proportion of social screen time",
@@ -65,7 +64,7 @@ ggplot(data = df, aes(x = Date, y = prop_ST)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 
 # Daily duration per use
-ggplot(data = df, aes(x = Date, y = duration_per_use)) +
+p5 <- ggplot(data = df, aes(x = Date, y = duration_per_use)) +
   geom_line() + 
   geom_point() +  
   labs(title = "Daily duration per use",
@@ -73,6 +72,9 @@ ggplot(data = df, aes(x = Date, y = duration_per_use)) +
        y = "Duration per use") +
   theme_minimal() + 
   theme(plot.title = element_text(hjust = 0.5)) 
+
+(combined_plot1 <- p1 + p2 + p3 + p4 + p5 +
+  plot_layout(nrow = 3, ncol = 2))
 
 df2 <- df[,c(1,3,5,6,9,10)]
 ggpairs(df2[,-1]) 
@@ -206,3 +208,88 @@ cdf <- pvonmises(angle_830AM_circular, mu, kappa)
 # The probability that the first pickup is at 8:30 AM or later
 probability <- 1 - cdf
 probability
+
+
+# Calculate the frequencies of each Pickup value
+pickup_freq <- table(df2$Pickups)
+# Sort the unique Pickup values in descending order
+sorted_pickups <- sort(unique(df2$Pickups), decreasing = F)
+# Calculate the cumulative sum of frequencies for each unique Pickup value
+cum_freq <- cumsum(rev(pickup_freq[as.character(sorted_pickups)]))
+# Calculate the cumulative probabilities
+cum_prob <- cum_freq / sum(pickup_freq)
+# Create a new dataframe for plotting
+df_plot <- data.frame(
+  Pickups = sorted_pickups,
+  CumulativeProbability = rev(cum_prob)
+)
+# Plot
+ggplot(df_plot, aes(x = Pickups, y = CumulativeProbability)) +
+  geom_point() + 
+  labs(x = "Vector Magnitude: c", 
+       y = "P(x >= c)",
+       title = "Occupation-Time Curves for Number of Pickups") +
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5)) 
+
+
+library(ggplot2)
+library(dplyr)
+library(cowplot)
+# Function to calculate cumulative probabilities
+calculate_cum_prob <- function(df, variable_name) {
+  # Calculate frequencies
+  variable_freq <- table(df[[variable_name]])
+  # Sort unique values
+  sorted_variable <- sort(unique(df[[variable_name]]), decreasing = F)
+  # Calculate cumulative frequencies and probabilities
+  cum_freq <- cumsum(variable_freq[as.character(sorted_variable)])
+  cum_prob <- cum_freq / sum(variable_freq)
+  # Return the data frame for plotting
+  data.frame(
+    VectorMagnitude = sorted_variable,
+    CumulativeProbability = rev(cum_prob)
+  )
+}
+
+# Apply the function to each variable and plot
+df_total_st <- calculate_cum_prob(df2, "Total.ST.min")
+df_social_st <- calculate_cum_prob(df2, "Social.ST.min")
+df_pickups <- calculate_cum_prob(df2, "Pickups")
+df_prop_st <- calculate_cum_prob(df2, "prop_ST")
+df_duration_per_use <- calculate_cum_prob(df2, "duration_per_use")
+
+# Create each plot
+p1 <- ggplot(df_total_st, aes(x = VectorMagnitude, y = CumulativeProbability)) +
+  geom_point() + 
+  labs(title = "Total Screen Time", x = "Vector Magnitude: c", y = "P(x >= c)") +
+  theme_minimal() 
+
+p2 <- ggplot(df_social_st, aes(x = VectorMagnitude, y = CumulativeProbability)) +
+  geom_point() + 
+  labs(title = "Social Screen Time", x = "Vector Magnitude: c", y = "P(x >= c)") +
+  theme_minimal() 
+
+p3 <- ggplot(df_pickups, aes(x = VectorMagnitude, y = CumulativeProbability)) +
+  geom_point() + 
+  labs(title = "Number of Pickups", x = "Vector Magnitude: c", y = "P(x >= c)") +
+  theme_minimal() 
+
+p4 <- ggplot(df_prop_st, aes(x = VectorMagnitude, y = CumulativeProbability)) +
+  geom_point() + 
+  labs(title = "Proportion of Social Screen Time", x = "Vector Magnitude: c", y = "P(x >= c)") +
+  theme_minimal() 
+
+p5 <- ggplot(df_duration_per_use, aes(x = VectorMagnitude, y = CumulativeProbability)) +
+  geom_point() + 
+  labs(title = "Duration per Use", x = "Vector Magnitude: c", y = "P(x >= c)") +
+  theme_minimal() 
+# Combine the plots
+(combined_plot <- plot_grid(
+  p1, p2, p3, p4, p5,
+  labels = c("A", "B", "C", "D", "E"),
+  ncol = 2,
+  align = 'v'
+))
+
+
