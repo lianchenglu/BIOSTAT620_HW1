@@ -56,7 +56,7 @@ In our study, informed consent ensured that participants were clear about how in
 \hline
 \textbf{Start Date} & \textbf{Data Freeze Date:} & \textbf{Data Points Collected} & \textbf{Source of Data} \\ \hline
 2024-01-16 & 2024-02-15 & Daily Screen Time, Daily Social Media Time, Daily First Pickup Time (Wake-up Time), Daily Pickups & Students enrolled in BIOSTAT620 \\ \hline
-\multicolumn{4}{|l|}{\textbf{Days of Collected Data:} 11} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Days of Collected Data:} 30} \\ \hline
 \end{tabular}
 \caption{Data Collection Plan}
 \label{table:data_collection_plan}
